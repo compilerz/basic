@@ -37,6 +37,16 @@ int main(int argc, char **argv) {
   yyparse();
   printf("%s\n", yyroot->str().c_str());
 
+  FunctionType *SINFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
+  Function *SINF = Function::Create(SINFT, Function::ExternalLinkage, "sin", &TheModule);
+  NamedFunctions["sin"] = SINF;
+  FunctionType *COSFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
+  Function *COSF = Function::Create(COSFT, Function::ExternalLinkage, "cos", &TheModule);
+  NamedFunctions["cos"] = COSF;
+  FunctionType *MDFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
+  Function *MDF = Function::Create(MDFT, Function::ExternalLinkage, "fmod", &TheModule);
+  NamedFunctions["mod"] = MDF;
+
   FunctionType *FT = FunctionType::get(Type::getDoubleTy(TheContext), false);
   Function *F = Function::Create(FT, Function::ExternalLinkage, "expression", &TheModule);
   BasicBlock *BB = BasicBlock::Create(TheContext, "entry", F);
@@ -84,7 +94,7 @@ int main(int argc, char **argv) {
   }
   pass.run(TheModule);
   dest.flush();
-  return system("clang basic.o -o basic.out");
+  return system("clang -o basic.out basic.o -lm");
 }
 
 void yyerror(const char *s) {

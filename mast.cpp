@@ -25,15 +25,12 @@ extern map<string, Function*> NamedFunctions;
   | e OR e    { $$ = new Call("or", $1, $3); }
   | e XOR e   { $$ = new Call("xor", $1, $3); }
   | e IMP e   { $$ = new Call("imp", $1, $3); }
-  | e EQV e   { $$ = new Call("eqv", $1, $3); }
-  | NOT e     { $$ = new Call("not", $2); }
   | e EQ e    { $$ = new Call("=", $1, $3); }
   | e LT e    { $$ = new Call("<", $1, $3); }
   | e GT e    { $$ = new Call(">", $1, $3); }
   | e LE e    { $$ = new Call("<=", $1, $3); }
   | e GE e    { $$ = new Call(">=", $1, $3); }
   | e NE e    { $$ = new Call("<>", $1, $3); }
-  | e MOD e   { $$ = new Call("mod", $1, $3); }
 */
 
 Value* Call::code() {
@@ -41,14 +38,20 @@ Value* Call::code() {
   for (auto& p : ps) vs.push_back(p->code());
   if (f == "+0") return vs[0];
   if (f == "-0") return Builder.CreateNeg(vs[0]);
-  // if (f == "^") return Builder.CreateCall()
-  // if (f == "\\") return
-  // if (f == "\/")
+  if (f == "^")  return Builder.CreateCall(NamedFunctions["pow"], vs, "^");
+  if (f == "\\") return Builder.CreateCall(NamedFunctions["floor"], {Builder.CreateFDiv(vs[0], vs[1], "\\")}, "floor");
+  if (f == "/")  return Builder.CreateFDiv(vs[0], vs[1], "\\");
   if (f == "*") return Builder.CreateFMul(vs[0], vs[1], "mul");
   if (f == "-") return Builder.CreateFSub(vs[0], vs[1], "sub");
   if (f == "+") return Builder.CreateFAdd(vs[0], vs[1], "add");
-  if (f == "mod") return Builder.CreateCall(NamedFunctions["fmod"], vs, "mod");
-  return NULL;
+  if (f == "mod") return Builder.CreateCall(NamedFunctions["mod"], vs, "mod");
+  if (f == "not") return Builder.CreateNot(vs[0]);
+  if (f == "eqv") return Builder.CreateNot(Builder.CreateXor(vs[0], vs[1]));
+  if (f == "imp") return Builder.CreateOr(Builder.CreateNot(vs[0]), vs[1]);
+  if (f == "xor") return Builder.CreateXor(vs[0], vs[1]);
+  if (f == "or") return Builder.CreateOr(vs[0], vs[1]);
+  if (f == "and") return Builder.CreateAnd(vs[0], vs[1]);
+  return Builder.CreateCall(NamedFunctions[f], vs, f.c_str());
 }
 
 Value* Id::code() {

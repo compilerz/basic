@@ -15,6 +15,7 @@ extern void yyerror(const char *s);
   double  d;
   char   *s;
   Ast    *a;
+  vector<Ast*> *as;
 }
 %token REM BR
 %token BOOLEANV INTEGERV LONGV SINGLEV DOUBLEV STRINGV ID
@@ -25,7 +26,8 @@ extern void yyerror(const char *s);
 %left ADD SUB
 %left MUL DIV IDIV
 %left POW
-%type<a> e n x
+%type<a> e call n x
+%type<as> es
 %start p
 
 %%
@@ -55,16 +57,25 @@ e:
   | '(' e ')' { $$ = $2; }
   | ADD e     { $$ = new Call("+0", {$2}); }
   | SUB e     { $$ = new Call("-0", {$2}); }
+  | call
   | n
   | x
 ;
 n:
-    BOOLEANV  { $$ = new Litr(yylval.b); }
-  | INTEGERV  { $$ = new Litr((long) yylval.i); }
-  | LONGV     { $$ = new Litr(yylval.l); }
-  | SINGLEV   { $$ = new Litr(yylval.f); }
+    BOOLEANV  { $$ = new Litr((double) yylval.b); }
+  | INTEGERV  { $$ = new Litr((double) yylval.i); }
+  | LONGV     { $$ = new Litr((double) yylval.l); }
+  | SINGLEV   { $$ = new Litr((double) yylval.f); }
   | DOUBLEV   { $$ = new Litr(yylval.d); }
   | STRINGV   { $$ = new Litr(new string(yylval.s)); }
+;
+call:
+    x '(' ')'       { $$ = new Call($1->str(), {}); }
+  | x '(' es  ')'   { $$ = new Call($1->str(), *$3); }
+;
+es:
+    es ',' e    { $1->push_back($3); $$ = $1; }
+  | e           { $$ = new vector<Ast*>({$1}); }
 ;
 x:
     ID        { $$ = new Id(yylval.s); }
