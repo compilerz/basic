@@ -27,13 +27,21 @@ extern void yyerror(const char *s);
 %left ADD SUB
 %left MUL DIV IDIV
 %left POW
-%type<a> s set io scall e fcall n x
-%type<as> pexps es
+%type<a> lin s set io scall e fcall n x
+%type<as> lins pexps es
 %start p
 
 %%
 p:
-    s BR  { yyroot = $1; }
+    lins BR  { yyroot = new Blk(*$1); }
+  |       { printf("nooo\n"); yyroot = NULL; }
+;
+lins:
+    lins BR lin   { $1->push_back($3); $$ = $1; }
+  | lin           { $$ = new vector<Ast*>({$1}); }
+;
+lin:
+    s
 ;
 s: 
     set

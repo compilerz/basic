@@ -36,13 +36,21 @@ AllocaInst* createAlloca(Function *f, Type *t, const string &x);
   | e NE e    { $$ = new Call("<>", $1, $3); }
 */
 
+Value* Blk::code() {
+  printf("blk.code\n");
+  for (auto& x : xs) x->code();
+  printf("blk.code2\n");
+  return ConstantFP::get(TheContext, APFloat(0.0));
+}
+
 Value* Let::code() {
   Value *_x = NamedValues[x], *_e = e->code();
   if (!_x) NamedValues[x] = _x = createAlloca(NULL, _e->getType(), x);
-  return Builder.CreateStore(_x, _e);
+  return Builder.CreateStore(_e, _x);
 }
 
 Value* Call::code() {
+  printf("call.code: %s\n", f);
   vector<Value*> vs;
   for (auto& p : ps) vs.push_back(p->code());
   if (f == "+0") return vs[0];
@@ -61,6 +69,7 @@ Value* Call::code() {
   if (f == "or") return Builder.CreateOr(vs[0], vs[1]);
   if (f == "and") return Builder.CreateAnd(vs[0], vs[1]);
   if (f == "print") return createPrint(vs);
+  printf("call.code2: %s\n", f);
   return Builder.CreateCall(NamedFunctions[f], vs, f.c_str());
 }
 

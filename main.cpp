@@ -43,6 +43,7 @@ map<string, Function*> NamedFunctions;
 int main(int argc, char **argv) {
   printf("> ");
   yyparse();
+  printf("parsing done %p\n", yyroot);
   printf("%s\n", yyroot->str().c_str());
 
   NamedFunctions["cls"] = declareFn(DEC, "fcls", {});
