@@ -5,4 +5,4 @@ build:
 		-o main.out main.cpp main.tab.cpp main.yy.cpp mast.cpp -ll
 
 clean:
-	@rm -f a.out main.tab.cpp main.tab.hpp main.yy.cpp
+	@rm -f basic.out basic.o main.out main.tab.cpp main.tab.hpp main.yy.cpp
