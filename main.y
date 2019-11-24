@@ -35,7 +35,7 @@ p:
     s BR  { yyroot = $1; }
 ;
 s: 
-    scall
+    e
 ;
 e: 
     e AND e   { $$ = new Call("and", {$1, $3}); }

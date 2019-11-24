@@ -17,6 +17,7 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#include "mval.hpp"
 #include "mast.hpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +26,13 @@ using namespace std;
 using namespace llvm;
 extern Ast *yyroot;
 extern int yyparse();
+
+Function* declareFn(Typ r, string x, vector<Typ> fs, bool isVarArg=false);
+Type* getType(Typ t);
+TargetMachine* getMachine();
+int compile(TargetMachine *m, string fobj);
+int link(string fobj, string fout);
+
 LLVMContext TheContext;
 IRBuilder<> Builder(TheContext);
 Module TheModule("BASIC", TheContext);
@@ -37,21 +45,12 @@ int main(int argc, char **argv) {
   yyparse();
   printf("%s\n", yyroot->str().c_str());
 
-  FunctionType *CLSFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
-  Function *CLSF = Function::Create(CLSFT, Function::ExternalLinkage, "fcls", &TheModule);
-  NamedFunctions["cls"] = CLSF;
-  FunctionType *SINFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
-  Function *SINF = Function::Create(SINFT, Function::ExternalLinkage, "sin", &TheModule);
-  NamedFunctions["sin"] = SINF;
-  FunctionType *COSFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
-  Function *COSF = Function::Create(COSFT, Function::ExternalLinkage, "cos", &TheModule);
-  NamedFunctions["cos"] = COSF;
-  FunctionType *MDFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
-  Function *MDF = Function::Create(MDFT, Function::ExternalLinkage, "fmod", &TheModule);
-  NamedFunctions["mod"] = MDF;
-
-  FunctionType *FT = FunctionType::get(Type::getDoubleTy(TheContext), false);
-  Function *F = Function::Create(FT, Function::ExternalLinkage, "expression", &TheModule);
+  NamedFunctions["cls"] = declareFn(DEC, "fcls", {});
+  NamedFunctions["sin"] = declareFn(DEC, "sin", {DEC});
+  NamedFunctions["cos"] = declareFn(DEC, "cos", {DEC});
+  NamedFunctions["mod"] = declareFn(DEC, "fmod", {DEC, DEC});
+  // auto PF = declareFn(INT, "printf", {}, true);
+  auto F = declareFn(DEC, "expression", {});
   BasicBlock *BB = BasicBlock::Create(TheContext, "entry", F);
   Builder.SetInsertPoint(BB);
   Builder.CreateRet(yyroot->code());
@@ -59,7 +58,6 @@ int main(int argc, char **argv) {
 
   FunctionType *PFT = FunctionType::get(Type::getInt32Ty(TheContext), true);
   Function *PF = Function::Create(PFT, Function::ExternalLinkage, "printf", &TheModule);
-
   FunctionType *MFT = FunctionType::get(Type::getVoidTy(TheContext), false);
   Function *MF = Function::Create(MFT, Function::ExternalLinkage, "main", &TheModule);
   BasicBlock *MBB = BasicBlock::Create(TheContext, "entry", MF);
@@ -70,35 +68,71 @@ int main(int argc, char **argv) {
   Builder.CreateCall(PF, {fmt, expr}, "callprintf");
   Builder.CreateRetVoid();
   TheModule.print(errs(), nullptr);
+  auto m = getMachine();
+  if (compile(m, "basic.o")) return 1;
+  return link("basic.o", "basic.out");
+}
 
-  auto TargetTriple = sys::getDefaultTargetTriple();
+Function* declareFn(Typ r, string x, vector<Typ> fs, bool isVarArg) {
+  auto _r = getType(r);
+  vector<Type*> _fs;
+  for (auto& f : fs) _fs.push_back(getType(f));
+  auto _x = FunctionType::get(_r,_fs, isVarArg);
+  return Function::Create(_x, Function::ExternalLinkage, x, &TheModule);
+}
+
+Type* getType(Typ t) { switch (t) {
+  case BOL: return Type::getInt1Ty(TheContext);
+  case INT: return Type::getInt64Ty(TheContext);
+  case DEC: return Type::getDoubleTy(TheContext);
+  default:  return Type::getInt8PtrTy(TheContext);
+}}
+
+TargetMachine* getMachine() {
+  auto triple = sys::getDefaultTargetTriple();
   InitializeAllTargetInfos();
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmParsers();
   InitializeAllAsmPrinters();
-  string Error;
-  auto Target = TargetRegistry::lookupTarget(TargetTriple, Error);
-  auto CPU = "generic";
-  auto Features = "";
+  string err;
+  auto target = TargetRegistry::lookupTarget(triple, err);
+  auto cpu = "generic";
+  auto features = "";
   TargetOptions opt;
-  auto RM = Optional<Reloc::Model>();
-  auto TargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
-  TheModule.setDataLayout(TargetMachine->createDataLayout());
-  TheModule.setTargetTriple(TargetTriple);
-  auto Filename = "basic.o";
-  std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
+  auto rm = Optional<Reloc::Model>();
+  auto m = target->createTargetMachine(triple, cpu, features, opt, rm);
+  TheModule.setDataLayout(m->createDataLayout());
+  TheModule.setTargetTriple(triple);
+  return m;
+}
+
+int compile(TargetMachine *m, string fobj) {
+  error_code err;
+  raw_fd_ostream dest(fobj, err, sys::fs::F_None);
+  if (err) {
+    errs()<<"could not open file: "<<err.message();
+    return 1;
+  }
+  auto type = TargetMachine::CGFT_ObjectFile;
   legacy::PassManager pass;
-  auto FileType = TargetMachine::CGFT_ObjectFile;
-  if (TargetMachine->addPassesToEmitFile(pass, dest, FileType)) {
-    errs() << "TargetMachine can't emit a file of this type";
+  if (m->addPassesToEmitFile(pass, dest, type)) {
+    errs()<<"target machine cant emit object file";
     return 1;
   }
   pass.run(TheModule);
   dest.flush();
-  return system("clang -o basic.out mlib.cpp basic.o -lm");
+  return 0;
 }
+
+int link(string fobj, string fout) {
+  char buff[256];
+  snprintf(buff, sizeof(buff),
+    "clang -o \"%s\" mlib.cpp \"%s\" -lm",
+    fout.c_str(), fobj.c_str());
+  return system(buff);
+}
+
 
 void yyerror(const char *s) {
   fprintf(stderr, "error: %s\n", s);
