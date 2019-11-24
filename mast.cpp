@@ -6,6 +6,7 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
@@ -18,6 +19,8 @@ extern IRBuilder<> Builder;
 extern Module TheModule;
 extern map<string, Value*> NamedValues;
 extern map<string, Function*> NamedFunctions;
+Value* createPrint(vector<Value*> vs);
+AllocaInst* createAlloca(Function *f, Type *t, const string &x);
 
 
 /*
@@ -32,6 +35,12 @@ extern map<string, Function*> NamedFunctions;
   | e GE e    { $$ = new Call(">=", $1, $3); }
   | e NE e    { $$ = new Call("<>", $1, $3); }
 */
+
+Value* Let::code() {
+  Value *_x = NamedValues[x], *_e = e->code();
+  if (!_x) NamedValues[x] = _x = createAlloca(NULL, _e->getType(), x);
+  return Builder.CreateStore(_x, _e);
+}
 
 Value* Call::code() {
   vector<Value*> vs;
@@ -51,11 +60,13 @@ Value* Call::code() {
   if (f == "xor") return Builder.CreateXor(vs[0], vs[1]);
   if (f == "or") return Builder.CreateOr(vs[0], vs[1]);
   if (f == "and") return Builder.CreateAnd(vs[0], vs[1]);
+  if (f == "print") return createPrint(vs);
   return Builder.CreateCall(NamedFunctions[f], vs, f.c_str());
 }
 
 Value* Id::code() {
-  return NULL;
+  Value *a = NamedValues[x];
+  return Builder.CreateLoad(a, x.c_str());
 }
 
 Value* Litr::code() { switch (x.t) {
@@ -64,3 +75,22 @@ Value* Litr::code() { switch (x.t) {
   case DEC: return ConstantFP::get(TheContext, APFloat(x.d()));
   default:  return Builder.CreateGlobalStringPtr(StringRef(x.s().c_str()));
 }}
+
+Value* createPrint(vector<Value*> vs) {
+  printf("createPrint\n");
+  for (auto& v : vs) {
+    string f = "print/s";
+    auto t = v->getType();
+    if (t->isDoubleTy()) f = "print/d";
+    if (t->isIntegerTy()) f = "print/i";
+    Builder.CreateCall(NamedFunctions[f], {v}, f);
+  }
+  printf("createPrint2\n");
+  return ConstantFP::get(TheContext, APFloat(0.0));
+}
+
+AllocaInst* createAlloca(Function *f, Type *t, const string &x) {
+  f = f? f : Builder.GetInsertBlock()->getParent();
+  IRBuilder<> b(&f->getEntryBlock(), f->getEntryBlock().begin());
+  return b.CreateAlloca(t, 0, x.c_str());
+}

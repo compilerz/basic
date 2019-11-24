@@ -22,10 +22,27 @@ struct Ast {
   }
 };
 
+struct Blk : Ast {
+  vector<Ast*> xs;
+  Blk(vector<Ast*> xs) : xs(xs) {}
+  void tostr(ostream& o) { for (auto& x : xs) o<<*x<<"\n"; }
+  Value* code();
+};
+
+struct Let : Ast {
+  string x;
+  Ast *e;
+  Let(string x, Ast *e) : x(x), e(e) {}
+  Let(Ast *x, Ast *e) : Let(x->str(), e) {}
+  void tostr(ostream& o) { o<<"(let "<<x<<" "<<*e<<")"; }
+  Value* code();
+};
+
 struct Call : Ast {
   string f;
   vector<Ast*> ps;
   Call(string f, vector<Ast*> ps) : f(f), ps(ps) {}
+  Call(Ast *f, vector<Ast*> ps) : Call(f->str(), ps) {}
   void tostr(ostream& o) { o<<'('<<f<<' '<<ps<<')'; }
   Value* code();
 };

@@ -19,6 +19,7 @@ extern void yyerror(const char *s);
 }
 %token REM BR
 %token BOOLEANV INTEGERV LONGV SINGLEV DOUBLEV STRINGV ID
+%token LET PRINT
 %left AND OR XOR IMP EQV
 %left NOT
 %left EQ LT GT LE GE NE
@@ -26,8 +27,8 @@ extern void yyerror(const char *s);
 %left ADD SUB
 %left MUL DIV IDIV
 %left POW
-%type<a> s scall e fcall n x
-%type<as> es
+%type<a> s set io scall e fcall n x
+%type<as> pexps es
 %start p
 
 %%
@@ -35,8 +36,33 @@ p:
     s BR  { yyroot = $1; }
 ;
 s: 
-    e
+    set
+  | io
+  | scall
 ;
+set:
+    LET x EQ e  { $$ = new Let($2, $4); }
+  | x EQ e      { $$ = new Let($1, $3); }
+;
+io:
+    PRINT pexps         { $2->push_back(new Litr("\n")); $$ = new Call("print", *$2); }
+  | PRINT pexps ','     { $2->push_back(new Litr("\t")); $$ = new Call("print", *$2); }
+  | PRINT pexps ';'     { $$ = new Call("print", *$2); }
+;
+scall:
+    x               { $$ = new Call($1, {}); }
+  | x es            { $$ = new Call($1, *$2); }
+;
+
+pexps:
+    pexps ',' e   { $1->push_back(new Litr("\t")); $1->push_back($3); $$ = $1; }
+  | pexps ';' e   { $1->push_back($3); $$ = $1; }
+  | e             { $$ = new vector<Ast*>({$1}); }
+  |               { $$ = new vector<Ast*>(); }
+;
+
+
+
 e: 
     e AND e   { $$ = new Call("and", {$1, $3}); }
   | e OR e    { $$ = new Call("or", {$1, $3}); }
@@ -72,13 +98,10 @@ n:
   | DOUBLEV   { $$ = new Litr(yylval.d); }
   | STRINGV   { $$ = new Litr(new string(yylval.s)); }
 ;
-scall:
-    x               { $$ = new Call($1->str(), {}); }
-  | x es            { $$ = new Call($1->str(), *$2); }
-;
+
 fcall:
-    x '(' ')'       { $$ = new Call($1->str(), {}); }
-  | x '(' es  ')'   { $$ = new Call($1->str(), *$3); }
+    x '(' ')'       { $$ = new Call($1, {}); }
+  | x '(' es  ')'   { $$ = new Call($1, *$3); }
 ;
 es:
     es ',' e    { $1->push_back($3); $$ = $1; }

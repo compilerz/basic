@@ -49,11 +49,17 @@ int main(int argc, char **argv) {
   NamedFunctions["sin"] = declareFn(DEC, "sin", {DEC});
   NamedFunctions["cos"] = declareFn(DEC, "cos", {DEC});
   NamedFunctions["mod"] = declareFn(DEC, "fmod", {DEC, DEC});
+  NamedFunctions["print/b"] = declareFn(DEC, "fprintb", {BOL});
+  NamedFunctions["print/i"] = declareFn(DEC, "fprinti", {INT});
+  NamedFunctions["print/d"] = declareFn(DEC, "fprintd", {DEC});
+  NamedFunctions["print/s"] = declareFn(DEC, "fprints", {STR});
   // auto PF = declareFn(INT, "printf", {}, true);
   auto F = declareFn(DEC, "expression", {});
   BasicBlock *BB = BasicBlock::Create(TheContext, "entry", F);
   Builder.SetInsertPoint(BB);
+  printf("test\n");
   Builder.CreateRet(yyroot->code());
+  printf("test2\n");
   verifyFunction(*F);
 
   FunctionType *PFT = FunctionType::get(Type::getInt32Ty(TheContext), true);

@@ -12,14 +12,14 @@ struct Val {
     bool    b;
     long    i;
     double  d;
-    char   *s;
+    const char *s;
   } v;
 
   Val() {}
   Val(bool x)   { t = BOL; v.b = x; }
   Val(long x)   { t = INT; v.i = x; }
   Val(double x) { t = DEC; v.d = x; }
-  Val(char *x)  { t = STR; v.s = x; }
+  Val(const char *x)  { t = STR; v.s = x; }
   bool b() { switch(t) {
     default:  return v.b;
   }}
