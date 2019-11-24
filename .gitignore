@@ -1,3 +1,11 @@
+# Generated files
+*.yy.cpp
+*.tab.cpp
+*.tab.hpp
+
+# Editor files
+.vscode/
+
 # Prerequisites
 *.d
 

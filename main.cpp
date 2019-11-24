@@ -1,3 +1,14 @@
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Host.h>
@@ -16,8 +27,9 @@ extern Ast *yyroot;
 extern int yyparse();
 LLVMContext TheContext;
 IRBuilder<> Builder(TheContext);
-Module TheModule("ARITHMETIC", TheContext);
+Module TheModule("BASIC", TheContext);
 map<string, Value*> NamedValues;
+map<string, Function*> NamedFunctions;
 
 
 int main(int argc, char **argv) {
@@ -61,7 +73,7 @@ int main(int argc, char **argv) {
   auto TargetMachine = Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
   TheModule.setDataLayout(TargetMachine->createDataLayout());
   TheModule.setTargetTriple(TargetTriple);
-  auto Filename = "output.o";
+  auto Filename = "basic.o";
   std::error_code EC;
   raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
   legacy::PassManager pass;
@@ -72,7 +84,7 @@ int main(int argc, char **argv) {
   }
   pass.run(TheModule);
   dest.flush();
-  return system("clang output.o -o test.out");
+  return system("clang basic.o -o basic.out");
 }
 
 void yyerror(const char *s) {
