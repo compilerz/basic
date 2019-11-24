@@ -37,6 +37,9 @@ int main(int argc, char **argv) {
   yyparse();
   printf("%s\n", yyroot->str().c_str());
 
+  FunctionType *CLSFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
+  Function *CLSF = Function::Create(CLSFT, Function::ExternalLinkage, "fcls", &TheModule);
+  NamedFunctions["cls"] = CLSF;
   FunctionType *SINFT = FunctionType::get(Type::getDoubleTy(TheContext), true);
   Function *SINF = Function::Create(SINFT, Function::ExternalLinkage, "sin", &TheModule);
   NamedFunctions["sin"] = SINF;
@@ -94,7 +97,7 @@ int main(int argc, char **argv) {
   }
   pass.run(TheModule);
   dest.flush();
-  return system("clang -o basic.out basic.o -lm");
+  return system("clang -o basic.out mlib.cpp basic.o -lm");
 }
 
 void yyerror(const char *s) {

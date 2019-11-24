@@ -26,13 +26,16 @@ extern void yyerror(const char *s);
 %left ADD SUB
 %left MUL DIV IDIV
 %left POW
-%type<a> e call n x
+%type<a> s scall e fcall n x
 %type<as> es
 %start p
 
 %%
 p:
-    e BR  { yyroot = $1; }
+    s BR  { yyroot = $1; }
+;
+s: 
+    scall
 ;
 e: 
     e AND e   { $$ = new Call("and", {$1, $3}); }
@@ -57,7 +60,7 @@ e:
   | '(' e ')' { $$ = $2; }
   | ADD e     { $$ = new Call("+0", {$2}); }
   | SUB e     { $$ = new Call("-0", {$2}); }
-  | call
+  | fcall
   | n
   | x
 ;
@@ -69,7 +72,11 @@ n:
   | DOUBLEV   { $$ = new Litr(yylval.d); }
   | STRINGV   { $$ = new Litr(new string(yylval.s)); }
 ;
-call:
+scall:
+    x               { $$ = new Call($1->str(), {}); }
+  | x es            { $$ = new Call($1->str(), *$2); }
+;
+fcall:
     x '(' ')'       { $$ = new Call($1->str(), {}); }
   | x '(' es  ')'   { $$ = new Call($1->str(), *$3); }
 ;
