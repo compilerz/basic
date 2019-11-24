@@ -33,6 +33,70 @@ extern map<string, Function*> NamedFunctions;
   | e NE e    { $$ = new Call("<>", $1, $3); }
 */
 
+Value* Line::code() {
+  return NULL;
+}
+
+Value* Declare::code() {
+  return NULL;
+}
+
+Value* Proc::code() {
+  return NULL;
+}
+
+Value* If::code() {
+  return NULL;
+}
+
+Value* Select::code() {
+  return NULL;
+}
+
+Value* For::code() {
+  return NULL;
+}
+
+Value* While::code() {
+  return NULL;
+}
+
+Value* Do::code() {
+  return NULL;
+}
+
+Value* Exit::code() {
+  return NULL;
+}
+
+Value* Return::code() {
+  return NULL;
+}
+
+Value* Gosub::code() {
+  return NULL;
+}
+
+Value* Goto::code() {
+  return NULL;
+}
+
+Value* LineInput::code() {
+  return NULL;
+}
+
+Value* Input::code() {
+  return NULL;
+}
+
+Value* Let::code() {
+  return NULL;
+}
+
+Value* Case::code() {
+  return NULL;
+}
+
 Value* Call::code() {
   vector<Value*> vs;
   for (auto& p : ps) vs.push_back(p->code());
