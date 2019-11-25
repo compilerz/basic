@@ -36,10 +36,26 @@ struct If : Ast {
   Value* code();
 };
 
+struct For : Ast {
+  string x, n;
+  Ast *f, *t, *s, *b;
+  For(string x, Ast *f, Ast *t, string n, Ast *s, Ast *b) :
+  x(x), n(n), f(f), t(t), s(s), b(b) {}
+  void tostr(ostream& o) { o<<"(for "<<x<<" ["<<*f<<" "<<*t<<"] "<<n<<" ["<<*s<<"]\n"<<*b<<")"; }
+  Value* code();
+};
+
 struct While : Ast {
   Ast *c, *b;
   While(Ast *c, Ast *b) : c(c), b(b) {}
   void tostr(ostream& o) { o<<"(while "<<*c<<"\n"<<*b<<")"; }
+  Value* code();
+};
+
+struct Do : Ast {
+  Ast *cb, *ce, *b;
+  Do(Ast *cb, Ast *ce, Ast *b) : cb(cb), ce(ce), b(b) {}
+  void tostr(ostream& o) { o<<"(do "<<*cb<<"\n"<<*b<<"\n"<<*ce<<")"; }
   Value* code();
 };
 

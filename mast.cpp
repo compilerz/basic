@@ -53,6 +53,33 @@ Value* If::code() {
   return (new Nop())->code();
 }
 
+Value* For::code() {
+  auto _f = Builder.GetInsertBlock()->getParent();
+  auto _c = BasicBlock::Create(TheContext, "for", _f);
+  auto _b = BasicBlock::Create(TheContext, "fbody");
+  auto _z = BasicBlock::Create(TheContext, "fend");
+  auto _x = NamedValues[x];
+  if (!_x) _x = createAlloca(_f, Type::getDoubleTy(TheContext), x);
+  Builder.CreateStore(f->code(), _x);
+  Builder.CreateBr(_c);
+  Builder.SetInsertPoint(_c);
+  auto xv = Builder.CreateLoad(_x, x);
+  auto cv = Builder.CreateFCmpOLE(_x, t->code(), "fcond");
+  Builder.CreateCondBr(cv, _b, _z);
+  _c = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_b);
+  Builder.SetInsertPoint(_b);
+  b->code();
+  xv = Builder.CreateLoad(_x, x);
+  auto nv = Builder.CreateFAdd(xv, s->code());
+  Builder.CreateStore(nv, _x);
+  Builder.CreateBr(_c);
+  _b = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_z);
+  Builder.SetInsertPoint(_z);
+  return (new Nop())->code();
+}
+
 Value* While::code() {
   auto _f = Builder.GetInsertBlock()->getParent();
   auto _c = BasicBlock::Create(TheContext, "while", _f);
@@ -67,6 +94,27 @@ Value* While::code() {
   Builder.SetInsertPoint(_b);
   b->code();
   Builder.CreateBr(_c);
+  _b = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_z);
+  Builder.SetInsertPoint(_z);
+  return (new Nop())->code();
+}
+
+Value* Do::code() {
+  auto _f  = Builder.GetInsertBlock()->getParent();
+  auto _c = BasicBlock::Create(TheContext, "do", _f);
+  auto _b  = BasicBlock::Create(TheContext, "dbody");
+  auto _z  = BasicBlock::Create(TheContext, "dend");
+  Builder.CreateBr(_c);
+  Builder.SetInsertPoint(_c);
+  auto cbv = cb->code();
+  Builder.CreateCondBr(cbv, _b, _z);
+  _c = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_b);
+  Builder.SetInsertPoint(_b);
+  b->code();
+  auto cev = ce->code();
+  Builder.CreateCondBr(cev, _c, _z);
   _b = Builder.GetInsertBlock();
   _f->getBasicBlockList().push_back(_z);
   Builder.SetInsertPoint(_z);
