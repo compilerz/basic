@@ -17,8 +17,9 @@ extern void yyerror(const char *s);
   Ast    *a;
   vector<Ast*> *as;
 }
-%token REM BR
+%token BR REM END
 %token BOOLEANV INTEGERV LONGV SINGLEV DOUBLEV STRINGV ID
+%token IF THEN ELSEIF ELSE ENDIF
 %token LET PRINT
 %left AND OR XOR IMP EQV
 %left NOT
@@ -27,22 +28,54 @@ extern void yyerror(const char *s);
 %left ADD SUB
 %left MUL DIV IDIV
 %left POW
-%type<a> lin s set io scall e fcall n x
-%type<as> lins pexps es
+%type<as> lins
+%type<a> lin
+%type<a> b if
+%type<a> elseifs
+%type<a> s set io scall e fcall n x
+%type<as> pexps
+%type<as> es
 %start p
 
 %%
 p:
-    lins BR  { yyroot = new Blk(*$1); }
-  |       { printf("nooo\n"); yyroot = NULL; }
+    lins BR   { yyroot = new Blk(*$1); }
+  |           { yyroot = NULL; }
 ;
 lins:
     lins BR lin   { $1->push_back($3); $$ = $1; }
   | lin           { $$ = new vector<Ast*>({$1}); }
 ;
 lin:
-    s
+    b
 ;
+
+
+
+b:
+    if
+  | s
+;
+if:
+    IF e THEN s                           { $$ = new If($2, $4, new Nop()); }
+  | IF e THEN s ELSE s                    { $$ = new If($2, $4, $6); }
+  | IF e THEN BR b BR endif               { $$ = new If($2, $5, new Nop()); }
+  | IF e THEN BR b BR ELSE BR b BR endif  { $$ = new If($2, $5, $9); }
+  | IF e THEN BR b BR elseifs             { $$ = new If($2, $5, $7); }
+;
+
+elseifs:
+    ELSEIF e THEN BR b BR endif             { $$ = new If($2, $5, {}); }
+  | ELSEIF e THEN BR b BR ELSE BR b endif   { $$ = new If($2, $5, $9); }
+  | ELSEIF e THEN BR b BR elseifs           { $$ = new If($2, $5, $7); }
+;
+endif:
+    END IF
+  | ENDIF
+;
+
+
+
 s: 
     set
   | io

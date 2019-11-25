@@ -25,6 +25,13 @@ STR \"(\\.|[^"\\])*\"
 \'[^\n]*                ;
 \r?\n                   { line++; return BR; }
 (?i:rem)[\ \t]+[^\n]*   { yylval.s = yytext+4; return REM; }
+(?i:end)                return END;
+
+(?i:if)         return IF;
+(?i:then)       return THEN;
+(?i:elseif)     return ELSEIF;
+(?i:else)       return ELSE;
+(?i:endif)      return ENDIF;
 
 (?i:let)        return LET;
 (?i:print)      return PRINT;

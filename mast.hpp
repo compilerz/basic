@@ -29,6 +29,19 @@ struct Blk : Ast {
   Value* code();
 };
 
+struct If : Ast {
+  Ast *c, *t, *e;
+  If(Ast *c, Ast *t, Ast *e) : c(c), t(t), e(e) {}
+  void tostr(ostream& o) { o<<"(if "<<*c<<" "<<*t<<" "<<*e<<")"; }
+  Value* code();
+};
+
+struct Nop : Ast {
+  Nop() {}
+  void tostr(ostream& o) { o<<"(nop)"; }
+  Value* code();
+};
+
 struct Let : Ast {
   string x;
   Ast *e;

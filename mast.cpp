@@ -23,23 +23,37 @@ Value* createPrint(vector<Value*> vs);
 AllocaInst* createAlloca(Function *f, Type *t, const string &x);
 
 
-/*
-    e AND e   { $$ = new Call("and", $1, $3); }
-  | e OR e    { $$ = new Call("or", $1, $3); }
-  | e XOR e   { $$ = new Call("xor", $1, $3); }
-  | e IMP e   { $$ = new Call("imp", $1, $3); }
-  | e EQ e    { $$ = new Call("=", $1, $3); }
-  | e LT e    { $$ = new Call("<", $1, $3); }
-  | e GT e    { $$ = new Call(">", $1, $3); }
-  | e LE e    { $$ = new Call("<=", $1, $3); }
-  | e GE e    { $$ = new Call(">=", $1, $3); }
-  | e NE e    { $$ = new Call("<>", $1, $3); }
-*/
 
 Value* Blk::code() {
-  printf("blk.code\n");
   for (auto& x : xs) x->code();
-  printf("blk.code2\n");
+  return ConstantFP::get(TheContext, APFloat(0.0));
+}
+
+Value* If::code() {
+  auto _c = c->code();
+  auto _f = Builder.GetInsertBlock()->getParent();
+  auto _t = BasicBlock::Create(TheContext, "then", _f);
+  auto _e = BasicBlock::Create(TheContext, "else");
+  auto _z = BasicBlock::Create(TheContext, "endif");
+  Builder.CreateCondBr(_c, _t, _e);
+  Builder.SetInsertPoint(_t);
+  auto tv = t->code();
+  Builder.CreateBr(_z);
+  _t = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_e);
+  Builder.SetInsertPoint(_e);
+  auto ev = e->code();
+  Builder.CreateBr(_z);
+  _e = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_z);
+  Builder.SetInsertPoint(_z);
+  // auto phi = Builder.CreatePHI(tv->getType(), 2, "ifval");
+  // phi->addIncoming(tv, _t);
+  // phi->addIncoming(ev, _e);
+  return (new Nop())->code();
+}
+
+Value* Nop::code() {
   return ConstantFP::get(TheContext, APFloat(0.0));
 }
 
@@ -50,7 +64,6 @@ Value* Let::code() {
 }
 
 Value* Call::code() {
-  printf("call.code: %s\n", f);
   vector<Value*> vs;
   for (auto& p : ps) vs.push_back(p->code());
   if (f == "+0") return vs[0];
@@ -62,6 +75,12 @@ Value* Call::code() {
   if (f == "-") return Builder.CreateFSub(vs[0], vs[1], "sub");
   if (f == "+") return Builder.CreateFAdd(vs[0], vs[1], "add");
   if (f == "mod") return Builder.CreateCall(NamedFunctions["mod"], vs, "mod");
+  if (f == "<>") return Builder.CreateFCmpONE(vs[0], vs[0], "<>");
+  if (f == ">=") return Builder.CreateFCmpOGE(vs[0], vs[1], ">=");
+  if (f == "<=") return Builder.CreateFCmpOLE(vs[0], vs[1], "<=");
+  if (f == ">") return Builder.CreateFCmpOGT(vs[0], vs[1], ">");
+  if (f == "<") return Builder.CreateFCmpOLT(vs[0], vs[1], "<");
+  if (f == "=") return Builder.CreateFCmpOEQ(vs[0], vs[1], "=");
   if (f == "not") return Builder.CreateNot(vs[0]);
   if (f == "eqv") return Builder.CreateNot(Builder.CreateXor(vs[0], vs[1]));
   if (f == "imp") return Builder.CreateOr(Builder.CreateNot(vs[0]), vs[1]);
@@ -69,7 +88,6 @@ Value* Call::code() {
   if (f == "or") return Builder.CreateOr(vs[0], vs[1]);
   if (f == "and") return Builder.CreateAnd(vs[0], vs[1]);
   if (f == "print") return createPrint(vs);
-  printf("call.code2: %s\n", f);
   return Builder.CreateCall(NamedFunctions[f], vs, f.c_str());
 }
 
@@ -86,7 +104,6 @@ Value* Litr::code() { switch (x.t) {
 }}
 
 Value* createPrint(vector<Value*> vs) {
-  printf("createPrint\n");
   for (auto& v : vs) {
     string f = "print/s";
     auto t = v->getType();
@@ -94,7 +111,6 @@ Value* createPrint(vector<Value*> vs) {
     if (t->isIntegerTy()) f = "print/i";
     Builder.CreateCall(NamedFunctions[f], {v}, f);
   }
-  printf("createPrint2\n");
   return ConstantFP::get(TheContext, APFloat(0.0));
 }
 
