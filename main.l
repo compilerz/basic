@@ -27,17 +27,63 @@ STR \"(\\.|[^"\\])*\"
 (?i:rem)[\ \t]+[^\n]*   { yylval.s = yytext+4; return REM; }
 (?i:end)                return END;
 
+(?i:declare)    return DECLARE;
+(?i:def)        return DEF;
+(?i:sub)        return SUB;
+(?i:function)   return FUNCTION;
+
+(?i:dim)        return DIM;
+(?i:redim)      return REDIM;
+(?i:shared)     return SHARED;
+(?i:static)     return STATIC;
+(?i:type)       return TYPE;
+
+(?i:as)         return AS;
+(?i:boolean)    return BOOLEAN;
+(?i:integer)    return INTEGER;
+(?i:long)       return LONG;
+(?i:single)     return SINGLE;
+(?i:double)     return DOUBLE;
+(?i:string)     return STRING;
+
 (?i:if)         return IF;
 (?i:then)       return THEN;
 (?i:elseif)     return ELSEIF;
 (?i:else)       return ELSE;
 (?i:endif)      return ENDIF;
+(?i:select)     return SELECT;
+(?i:case)       return CASE;
 
+(?i:for)        return FOR;
+(?i:to)         return TO;
+(?i:step)       return STEP;
+(?i:next)       return NEXT;
 (?i:while)      return WHILE;
 (?i:wend)       return WEND;
+(?i:do)         return DO;
+(?i:until)      return UNTIL;
+(?i:loop)       return LOOP;
 
 (?i:let)        return LET;
+(?i:const)      return CONST;
+(?i:input)      return INPUT;
+(?i:line)       return LINE;
 (?i:print)      return PRINT;
+(?i:open)       return OPEN;
+(?i:close)      return CLOSE;
+
+(?i:output)     return OUTPUT;
+(?i:random)     return RANDOM;
+(?i:binary)     return BINARY;
+(?i:append)     return APPEND;
+(?i:access)     return ACCESS;
+(?i:read)       return READ;
+(?i:write)      return WRITE;
+
+(?i:goto)       return GOTO;
+(?i:gosub)      return GOSUB;
+(?i:return)     return RETURN;
+(?i:exit)       return EXIT;
 
 (?i:and)  return AND;
 (?i:or)   return OR;
