@@ -1,5 +1,6 @@
 %{
 #include "mast.hpp"
+#include <string.h>
 
 Ast *yyroot;
 extern int yylex();
@@ -147,7 +148,7 @@ n:
   | LONGV     { $$ = new Litr((double) yylval.l); }
   | SINGLEV   { $$ = new Litr((double) yylval.f); }
   | DOUBLEV   { $$ = new Litr(yylval.d); }
-  | STRINGV   { $$ = new Litr(new string(yylval.s)); }
+  | STRINGV   { $$ = new Litr(strdup(yylval.s)); }
 ;
 
 fcall:

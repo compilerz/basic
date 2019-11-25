@@ -57,9 +57,7 @@ int main(int argc, char **argv) {
   auto F = declareFn(DEC, "expression", {});
   BasicBlock *BB = BasicBlock::Create(TheContext, "entry", F);
   Builder.SetInsertPoint(BB);
-  printf("test\n");
   Builder.CreateRet(yyroot->code());
-  printf("test2\n");
   verifyFunction(*F);
 
   FunctionType *PFT = FunctionType::get(Type::getInt32Ty(TheContext), true);
