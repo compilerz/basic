@@ -36,6 +36,13 @@ struct If : Ast {
   Value* code();
 };
 
+struct While : Ast {
+  Ast *c, *b;
+  While(Ast *c, Ast *b) : c(c), b(b) {}
+  void tostr(ostream& o) { o<<"(while "<<*c<<"\n"<<*b<<")"; }
+  Value* code();
+};
+
 struct Nop : Ast {
   Nop() {}
   void tostr(ostream& o) { o<<"(nop)"; }

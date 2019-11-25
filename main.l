@@ -33,6 +33,9 @@ STR \"(\\.|[^"\\])*\"
 (?i:else)       return ELSE;
 (?i:endif)      return ENDIF;
 
+(?i:while)      return WHILE;
+(?i:wend)       return WEND;
+
 (?i:let)        return LET;
 (?i:print)      return PRINT;
 

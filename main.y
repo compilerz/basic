@@ -20,6 +20,7 @@ extern void yyerror(const char *s);
 %token BR REM END
 %token BOOLEANV INTEGERV LONGV SINGLEV DOUBLEV STRINGV ID
 %token IF THEN ELSEIF ELSE ENDIF
+%token WHILE WEND
 %token LET PRINT
 %left AND OR XOR IMP EQV
 %left NOT
@@ -30,7 +31,7 @@ extern void yyerror(const char *s);
 %left POW
 %type<as> lins
 %type<a> lin
-%type<a> b if
+%type<a> b if while
 %type<a> elseifs
 %type<a> s set io scall e fcall n x
 %type<as> pexps
@@ -54,6 +55,7 @@ lin:
 
 b:
     if
+  | while
   | s
 ;
 if:
@@ -62,6 +64,9 @@ if:
   | IF e THEN BR b BR endif               { $$ = new If($2, $5, new Nop()); }
   | IF e THEN BR b BR ELSE BR b BR endif  { $$ = new If($2, $5, $9); }
   | IF e THEN BR b BR elseifs             { $$ = new If($2, $5, $7); }
+;
+while:
+    WHILE e BR lins BR WEND      { $$ = new While($2, new Blk(*$4)); }
 ;
 
 elseifs:

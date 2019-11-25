@@ -30,19 +30,19 @@ Value* Blk::code() {
 }
 
 Value* If::code() {
-  auto _c = c->code();
+  auto cv = c->code();
   auto _f = Builder.GetInsertBlock()->getParent();
   auto _t = BasicBlock::Create(TheContext, "then", _f);
   auto _e = BasicBlock::Create(TheContext, "else");
   auto _z = BasicBlock::Create(TheContext, "endif");
-  Builder.CreateCondBr(_c, _t, _e);
+  Builder.CreateCondBr(cv, _t, _e);
   Builder.SetInsertPoint(_t);
-  auto tv = t->code();
+  t->code();
   Builder.CreateBr(_z);
   _t = Builder.GetInsertBlock();
   _f->getBasicBlockList().push_back(_e);
   Builder.SetInsertPoint(_e);
-  auto ev = e->code();
+  e->code();
   Builder.CreateBr(_z);
   _e = Builder.GetInsertBlock();
   _f->getBasicBlockList().push_back(_z);
@@ -50,6 +50,26 @@ Value* If::code() {
   // auto phi = Builder.CreatePHI(tv->getType(), 2, "ifval");
   // phi->addIncoming(tv, _t);
   // phi->addIncoming(ev, _e);
+  return (new Nop())->code();
+}
+
+Value* While::code() {
+  auto _f = Builder.GetInsertBlock()->getParent();
+  auto _c = BasicBlock::Create(TheContext, "while", _f);
+  auto _b = BasicBlock::Create(TheContext, "wbody");
+  auto _z = BasicBlock::Create(TheContext, "wend");
+  Builder.CreateBr(_c);
+  Builder.SetInsertPoint(_c);
+  auto cv = c->code();
+  Builder.CreateCondBr(cv, _b, _z);
+  _c = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_b);
+  Builder.SetInsertPoint(_b);
+  b->code();
+  Builder.CreateBr(_c);
+  _b = Builder.GetInsertBlock();
+  _f->getBasicBlockList().push_back(_z);
+  Builder.SetInsertPoint(_z);
   return (new Nop())->code();
 }
 
