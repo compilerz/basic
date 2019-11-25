@@ -35,34 +35,54 @@ extern void yyerror(const char *s);
 %left ADD SUB
 %left MUL DIV IDIV
 %left POW
-%type<as> lins
-%type<a> lin
-%type<a> b if while
-%type<a> elseifs
-%type<a> s set io scall e fcall n x
+%type<a> b l
+%type<a> c proc define if select for while do
+%type<a> elseifs cases case case_else
+%type<a> s set io file branch scall
+%type<a> e fcall n x
 %type<as> pexps
 %type<as> es
 %start p
 
 %%
 p:
-    lins BR   { yyroot = new Blk(*$1); }
+    b         { yyroot = $1; }
   |           { yyroot = NULL; }
 ;
-lins:
-    lins BR lin   { $1->push_back($3); $$ = $1; }
-  | lin           { $$ = new vector<Ast*>({$1}); }
-;
-lin:
-    b
-;
-
-
-
 b:
-    if
+    b BR l    {}
+  | l         {}
+;
+l:
+    x ':' c   {}
+  | n c       {}
+  | c         {}
+  | BR        {}
+;
+
+c:
+    proc
+  | define
+  | if
+  | select
+  | for
   | while
+  | do
   | s
+;
+proc:
+    DECLARE SUB x defc                    { /* $$ = new Declare($3, $4); */ }
+  | DECLARE FUNCTION x defc               { /* $$ = new Declare($3, $4); */ }
+  | SUB x defc BR b BR END SUB            { /* $$ = new Proc($2, $3, $5); */ }
+  | FUNCTION x defc BR b BR END FUNCTION  { /* $$ = new Proc($2, $3, $5); */ }
+;
+define:
+    DIM defs                    {}
+  | DIM SHARED defs             {}
+  | REDIM es                    {}
+  | SHARED defs                 {}
+  | STATIC defs                 {}
+  | TYPE x BR defb BR END TYPE  {}
 ;
 if:
     IF e THEN s                           { $$ = new If($2, $4, new Nop()); }
@@ -71,8 +91,23 @@ if:
   | IF e THEN BR b BR ELSE BR b BR endif  { $$ = new If($2, $5, $9); }
   | IF e THEN BR b BR elseifs             { $$ = new If($2, $5, $7); }
 ;
+select:
+    SELECT CASE e BR cases END SELECT    { /* $$ = new Select($3, $5); */ }
+;
+for:
+    FOR x EQ e TO e BR b BR NEXT            { /* $$ = new For($2, $4, $6, $2, 1, $8); */ }
+  | FOR x EQ e TO e BR b BR NEXT x          { /* $$ = new For($2, $4, $6, $11, 1, $8); */ }
+  | FOR x EQ e TO e STEP e BR b BR NEXT     { /* $$ = new For($2, $4, $6, $2, $8, $10); */ }
+  | FOR x EQ e TO e STEP e BR b BR NEXT x   { /* $$ = new For($2, $4, $6, $13, $8, $10); */ }
+;
 while:
-    WHILE e BR lins BR WEND      { $$ = new While($2, new Blk(*$4)); }
+    WHILE e BR b BR WEND      { $$ = new While($2, $4); }
+;
+do:
+    DO WHILE e BR b BR LOOP   { /* $$ = new Do($3, new Litr(true), $5); */ }
+  | DO UNTIL e BR b BR LOOP   { /* $$ = new Do(new Call("not", {$3}), new Litr(true), $5); */ }
+  | DO BR b BR LOOP WHILE e   { /* $$ = new Do(new Litr(true), $7, $3); */ }
+  | DO BR b BR LOOP UNTIL e   { /* $$ = new Do(new Litr(true), new Call("not", {$7}), $3); */ }
 ;
 
 elseifs:
@@ -84,28 +119,88 @@ endif:
     END IF
   | ENDIF
 ;
+cases:
+    case cases  { /* $$ = $1->add($3); */ }
+  | case_else   { /* $$ = new Asts({$1}); */ }
+  | case        { /* $$ = $1->add($3); */ }
+;
+case:
+    CASE e BR b BR        { /* $$ = new Case($2, $4); */ }
+  | CASE e TO e BR b BR   { /* $$ = new CaseTo($2, $4, $6); */ }
+;
+case_else:
+    CASE ELSE BR b BR     { /* $$ = new CaseElse($4); */ }
+;
 
 
 
 s: 
     set
   | io
+  | file
+  | branch
   | scall
 ;
 set:
-    LET x EQ e  { $$ = new Let($2, $4); }
-  | x EQ e      { $$ = new Let($1, $3); }
+    LET x EQ e    { $$ = new Let($2, $4); }
+  | CONST x EQ e  { $$ = new Let($2, $4); }
+  | x EQ e        { $$ = new Let($1, $3); }
 ;
 io:
-    PRINT pexps         { $2->push_back(new Litr("\n")); $$ = new Call("print", *$2); }
+    INPUT es            { /* $$ = new Input("", "", $2); */ }
+  | INPUT ';' es        { /* $$ = new Input("", "?", $3); */ }
+  | INPUT e ';' es      { /* $$ = new Input($2, "?", $4); */ }
+  | LINE INPUT x        { /* $$ = new LineInput("", "", $3); */ }
+  | LINE INPUT ';' x    { /* $$ = mew LineInput("", "?", $4); */ }
+  | LINE INPUT e ';' x  { /* $$ = new LineInput($3, "?", $5); */ }
+  | LINE INPUT e ',' x  { /* $$ = new LineInput($3, "", $5); */ }
+  | PRINT pexps         { $2->push_back(new Litr("\n")); $$ = new Call("print", *$2); }
   | PRINT pexps ','     { $2->push_back(new Litr("\t")); $$ = new Call("print", *$2); }
   | PRINT pexps ';'     { $$ = new Call("print", *$2); }
+;
+file:
+    OPEN e fmode facc AS e  { /* $$ = new Call("open", $6, $2, new Litr($3), new Litr($4)); */ }
+  | OPEN e ',' e ',' e      { /* $$ = new Call("open", $4, $6, $2, new Litr("RW")); */ }
+  | CLOSE es                { /* $$ = new Call("close", es); /* split?? */ }
+  | CLOSE                   { /* $$ = new Call("closeall", {}); */ }
+;
+branch:
+    GOTO lbl    { /* $$ = new Goto($2); */ }
+  | GOSUB lbl   { /* $$ = new Gosub($2); */ }
+  | RETURN      { /* $$ = new Return(""); */ }
+  | RETURN lbl  { /* $$ = new Return($2); */ }
+  | EXIT efrom  { /* $$ = new Exit((long) $2); */ }
 ;
 scall:
     x               { $$ = new Call($1, {}); }
   | x es            { $$ = new Call($1, *$2); }
 ;
 
+fmode:
+    FOR OUTPUT  { /* $$ = "O"; */ }
+  | FOR INPUT   { /* $$ = "I"; */ }
+  | FOR RANDOM  { /* $$ = "R"; */ }
+  | FOR BINARY  { /* $$ = "B"; */ }
+  | FOR APPEND  { /* $$ = "A"; */ }
+  |             { /* $$ = "I"; */ }
+;
+facc:
+    ACCESS READ         { /* $$ = "R"; */ }
+  | ACCESS WRITE        { /* $$ = "W"; */ }
+  | ACCESS READ WRITE   { /* $$ = "RW"; */ }
+  |                     { /* $$ = "R"; */ }
+;
+lbl:
+    n
+  | x
+;
+efrom:
+    DEF       { /* $$ = 'D'; */ }
+  | DO        { /* $$ = 'd'; */ }
+  | FOR       { /* $$ = 'f'; */ }
+  | SUB       { /* $$ = 'S'; */ }
+  | FUNCTION  { /* $$ = 'F'; */ }
+;
 pexps:
     pexps ',' e   { $1->push_back(new Litr("\t")); $1->push_back($3); $$ = $1; }
   | pexps ';' e   { $1->push_back($3); $$ = $1; }
@@ -142,6 +237,10 @@ e:
   | n
   | x
 ;
+fcall:
+    x '(' ')'       { $$ = new Call($1, {}); }
+  | x '(' es  ')'   { $$ = new Call($1, *$3); }
+;
 n:
     BOOLEANV  { $$ = new Litr((double) yylval.b); }
   | INTEGERV  { $$ = new Litr((double) yylval.i); }
@@ -150,17 +249,38 @@ n:
   | DOUBLEV   { $$ = new Litr(yylval.d); }
   | STRINGV   { $$ = new Litr(strdup(yylval.s)); }
 ;
-
-fcall:
-    x '(' ')'       { $$ = new Call($1, {}); }
-  | x '(' es  ')'   { $$ = new Call($1, *$3); }
+x:
+    ID        { $$ = new Id(yylval.s); }
 ;
+
 es:
     es ',' e    { $1->push_back($3); $$ = $1; }
   | e           { $$ = new vector<Ast*>({$1}); }
 ;
-x:
-    ID        { $$ = new Id(yylval.s); }
+defb:
+    defb BR def   {}
+  | def           {}
+;
+defc:
+    '(' defs ')'  {}
+  | '(' ')'       {}
+  |               {}
+;
+defs:
+    defs ',' def  {}
+  | def           {}
+;
+def:
+    x AS typ      {}
+  | x             {}
+;
+typ:
+    BOOLEAN   { /* $$ = 'b'; */ }
+  | INTEGER   { /* $$ = 'i'; */ }
+  | LONG      { /* $$ = 'l'; */ }
+  | SINGLE    { /* $$ = 's'; */ }
+  | DOUBLE    { /* $$ = 'd'; */ }
+  | STRING    { /* $$ = 's'; */ }
 ;
 
 %%

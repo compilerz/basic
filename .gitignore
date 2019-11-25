@@ -2,6 +2,7 @@
 *.yy.cpp
 *.tab.cpp
 *.tab.hpp
+*.output
 
 # Editor files
 .vscode/

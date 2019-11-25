@@ -1,6 +1,6 @@
 build:
 	@flex -o main.yy.cpp main.l
-	@bison -o main.tab.cpp -d main.y
+	@bison -o main.tab.cpp -d main.y -v
 	@g++ --std=c++14 `llvm-config --cxxflags --ldflags --libs --libfiles --system-libs` \
 		-o main.out main.cpp main.tab.cpp main.yy.cpp mast.cpp -ll
 
