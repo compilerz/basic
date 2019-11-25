@@ -46,18 +46,20 @@ extern void yyerror(const char *s);
 
 %%
 p:
-    b         { yyroot = $1; }
-  |           { yyroot = NULL; }
+    b     { yyroot = $1; }
+  |       { yyroot = NULL; }
 ;
 b:
-    b BR l    {}
-  | l         {}
+    b l   { $$ = ((Blk*)$1)->add($2); }
+  | l     { $$ = new Blk({$1}); }
 ;
 l:
-    x ':' c   {}
-  | n c       {}
-  | c         {}
-  | BR        {}
+    x ':' c BR  { $$ = $3; }
+  | x ':' BR    {}
+  | n c BR      { $$ = $2; }
+  | n BR        {}
+  | c BR        { $$ = $1; }
+  | BR          {}
 ;
 
 c:
@@ -71,10 +73,10 @@ c:
   | s
 ;
 proc:
-    DECLARE SUB x defc                    { /* $$ = new Declare($3, $4); */ }
-  | DECLARE FUNCTION x defc               { /* $$ = new Declare($3, $4); */ }
-  | SUB x defc BR b BR END SUB            { /* $$ = new Proc($2, $3, $5); */ }
-  | FUNCTION x defc BR b BR END FUNCTION  { /* $$ = new Proc($2, $3, $5); */ }
+    DECLARE SUB x defc                 { /* $$ = new Declare($3, $4); */ }
+  | DECLARE FUNCTION x defc            { /* $$ = new Declare($3, $4); */ }
+  | SUB x defc BR b END SUB            { /* $$ = new Proc($2, $3, $5); */ }
+  | FUNCTION x defc BR b END FUNCTION  { /* $$ = new Proc($2, $3, $5); */ }
 ;
 define:
     DIM defs                    {}
@@ -85,35 +87,35 @@ define:
   | TYPE x BR defb BR END TYPE  {}
 ;
 if:
-    IF e THEN s                           { $$ = new If($2, $4, new Nop()); }
-  | IF e THEN s ELSE s                    { $$ = new If($2, $4, $6); }
-  | IF e THEN BR b BR endif               { $$ = new If($2, $5, new Nop()); }
-  | IF e THEN BR b BR ELSE BR b BR endif  { $$ = new If($2, $5, $9); }
-  | IF e THEN BR b BR elseifs             { $$ = new If($2, $5, $7); }
+    IF e THEN s                     { $$ = new If($2, $4, new Nop()); }
+  | IF e THEN s ELSE s              { $$ = new If($2, $4, $6); }
+  | IF e THEN BR b endif            { $$ = new If($2, $5, new Nop()); }
+  | IF e THEN BR b ELSE BR b endif  { $$ = new If($2, $5, $8); }
+  | IF e THEN BR b elseifs          { $$ = new If($2, $5, $6); }
 ;
 select:
     SELECT CASE e BR cases END SELECT    { /* $$ = new Select($3, $5); */ }
 ;
 for:
-    FOR x EQ e TO e BR b BR NEXT            { /* $$ = new For($2, $4, $6, $2, 1, $8); */ }
-  | FOR x EQ e TO e BR b BR NEXT x          { /* $$ = new For($2, $4, $6, $11, 1, $8); */ }
-  | FOR x EQ e TO e STEP e BR b BR NEXT     { /* $$ = new For($2, $4, $6, $2, $8, $10); */ }
-  | FOR x EQ e TO e STEP e BR b BR NEXT x   { /* $$ = new For($2, $4, $6, $13, $8, $10); */ }
+    FOR x EQ e TO e BR b NEXT            { /* $$ = new For($2, $4, $6, $2, 1, $8); */ }
+  | FOR x EQ e TO e BR b NEXT x          { /* $$ = new For($2, $4, $6, $11, 1, $8); */ }
+  | FOR x EQ e TO e STEP e BR b NEXT     { /* $$ = new For($2, $4, $6, $2, $8, $10); */ }
+  | FOR x EQ e TO e STEP e BR b NEXT x   { /* $$ = new For($2, $4, $6, $13, $8, $10); */ }
 ;
 while:
-    WHILE e BR b BR WEND      { $$ = new While($2, $4); }
+    WHILE e BR b WEND      { $$ = new While($2, $4); }
 ;
 do:
-    DO WHILE e BR b BR LOOP   { /* $$ = new Do($3, new Litr(true), $5); */ }
-  | DO UNTIL e BR b BR LOOP   { /* $$ = new Do(new Call("not", {$3}), new Litr(true), $5); */ }
-  | DO BR b BR LOOP WHILE e   { /* $$ = new Do(new Litr(true), $7, $3); */ }
-  | DO BR b BR LOOP UNTIL e   { /* $$ = new Do(new Litr(true), new Call("not", {$7}), $3); */ }
+    DO WHILE e BR b LOOP   { /* $$ = new Do($3, new Litr(true), $5); */ }
+  | DO UNTIL e BR b LOOP   { /* $$ = new Do(new Call("not", {$3}), new Litr(true), $5); */ }
+  | DO BR b LOOP WHILE e   { /* $$ = new Do(new Litr(true), $7, $3); */ }
+  | DO BR b LOOP UNTIL e   { /* $$ = new Do(new Litr(true), new Call("not", {$7}), $3); */ }
 ;
 
 elseifs:
-    ELSEIF e THEN BR b BR endif             { $$ = new If($2, $5, {}); }
-  | ELSEIF e THEN BR b BR ELSE BR b endif   { $$ = new If($2, $5, $9); }
-  | ELSEIF e THEN BR b BR elseifs           { $$ = new If($2, $5, $7); }
+    ELSEIF e THEN BR b endif             { $$ = new If($2, $5, {}); }
+  | ELSEIF e THEN BR b ELSE BR b endif   { $$ = new If($2, $5, $8); }
+  | ELSEIF e THEN BR b elseifs           { $$ = new If($2, $5, $6); }
 ;
 endif:
     END IF
@@ -125,11 +127,11 @@ cases:
   | case        { /* $$ = $1->add($3); */ }
 ;
 case:
-    CASE e BR b BR        { /* $$ = new Case($2, $4); */ }
-  | CASE e TO e BR b BR   { /* $$ = new CaseTo($2, $4, $6); */ }
+    CASE e BR b        { /* $$ = new Case($2, $4); */ }
+  | CASE e TO e BR b   { /* $$ = new CaseTo($2, $4, $6); */ }
 ;
 case_else:
-    CASE ELSE BR b BR     { /* $$ = new CaseElse($4); */ }
+    CASE ELSE BR b     { /* $$ = new CaseElse($4); */ }
 ;
 
 

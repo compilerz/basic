@@ -26,6 +26,7 @@ struct Blk : Ast {
   vector<Ast*> xs;
   Blk(vector<Ast*> xs) : xs(xs) {}
   void tostr(ostream& o) { for (auto& x : xs) o<<*x<<"\n"; }
+  Ast* add(Ast *x) { xs.push_back(x); return this; }
   Value* code();
 };
 
